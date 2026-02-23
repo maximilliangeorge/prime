@@ -29,6 +29,7 @@ program
   .command("graph")
   .argument("[directory]", "target directory", ".")
   .option("-f, --format <format>", "output format: list, tree, dot, json", "list")
+  .option("-d, --depth <depth>", "max tree depth (tree format only)", parseInt)
   .description("Display the argument graph")
   .action(graphCommand);
 

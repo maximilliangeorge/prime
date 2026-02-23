@@ -9,7 +9,7 @@ import { resolveAllPremises } from "../resolve.js";
 
 export async function graphCommand(
   directory: string,
-  options: { format: string }
+  options: { format: string; depth?: number }
 ): Promise<void> {
   const rootDir = path.resolve(directory);
   const files = discoverNodes(rootDir);
@@ -35,7 +35,7 @@ export async function graphCommand(
       console.log(formatJson(graph));
       break;
     case "tree":
-      console.log(formatTree(graph));
+      console.log(formatTree(graph, { maxDepth: options.depth }));
       break;
     case "list":
     default:

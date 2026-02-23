@@ -134,7 +134,10 @@ export function formatList(
 
   // Reorder args according to topological sort
   const orderMap = new Map(sorted.map((key, i) => [key, i]))
-  args.sort((a, b) => (orderMap.get(a.conclusion) ?? 0) - (orderMap.get(b.conclusion) ?? 0))
+  args.sort(
+    (a, b) =>
+      (orderMap.get(a.conclusion) ?? 0) - (orderMap.get(b.conclusion) ?? 0),
+  )
 
   const lines: string[] = []
   const seen = new Set<string>()
@@ -176,8 +179,30 @@ export function formatList(
   return lines.join('\n')
 }
 
-export function formatTree(graph: ArgumentGraph): string {
+/** Count nodes that would be printed in the subtree below nodeKey. */
+function countDescendants(graph: ArgumentGraph, nodeKey: string, visited: Set<string>): number {
+  const children = getChildren(graph, nodeKey)
+  let count = 0
+  for (const child of children) {
+    count += 1
+    if (visited.has(child)) continue
+    visited.add(child)
+    count += countDescendants(graph, child, visited)
+  }
+  return count
+}
+
+export interface TreeFormatOptions {
+  maxDepth?: number
+}
+
+export function formatTree(
+  graph: ArgumentGraph,
+  options: TreeFormatOptions = {},
+): string {
   if (graph.nodes.size === 0) return ''
+
+  const { maxDepth } = options
 
   // Roots = nodes with no incoming edges (final conclusions)
   const roots = findRoots(graph)
@@ -187,7 +212,13 @@ export function formatTree(graph: ArgumentGraph): string {
   const lines: string[] = []
   const globalVisited = new Set<string>()
 
-  function walk(nodeKey: string, prefix: string, isLast: boolean, isRoot: boolean): void {
+  function walk(
+    nodeKey: string,
+    prefix: string,
+    isLast: boolean,
+    isRoot: boolean,
+    depth: number,
+  ): void {
     const node = graph.nodes.get(nodeKey)!
     const label = node.claim || node.relativePath
 
@@ -201,21 +232,28 @@ export function formatTree(graph: ArgumentGraph): string {
     if (ref) return // already expanded
 
     const children = getChildren(graph, nodeKey)
+
+    if (maxDepth !== undefined && depth >= maxDepth) {
+      if (children.length > 0) {
+        const remaining = countDescendants(graph, nodeKey, new Set(globalVisited))
+        const childPrefix = isRoot ? '' : prefix + (isLast ? '   ' : '│  ')
+        lines.push(`${childPrefix}└─ (+${remaining} more)`)
+      }
+      return
+    }
     const childPrefix = isRoot ? '' : prefix + (isLast ? '   ' : '│  ')
     children.forEach((child, i) => {
-      walk(child, childPrefix, i === children.length - 1, false)
+      walk(child, childPrefix, i === children.length - 1, false, depth + 1)
     })
   }
 
   roots.forEach((root, rootIdx) => {
     if (rootIdx > 0) lines.push('')
-    walk(root, '', true, true)
+    walk(root, '', true, true, 0)
   })
 
   return lines.join('\n')
 }
-
-
 
 export function formatDot(graph: ArgumentGraph): string {
   const lines: string[] = ['digraph prime {', '  rankdir=BT;', '']
