@@ -3,7 +3,7 @@ import chalk from "chalk";
 import { discoverNodes } from "../discover.js";
 import { parseNode } from "../parse.js";
 import { buildGraph } from "../graph-builder.js";
-import { formatTree, formatDot, formatJson } from "../format.js";
+import { formatList, formatTree, formatDot, formatJson } from "../format.js";
 import { loadManifest } from "../manifest.js";
 import { resolveAllPremises } from "../resolve.js";
 
@@ -35,8 +35,11 @@ export async function graphCommand(
       console.log(formatJson(graph));
       break;
     case "tree":
-    default:
       console.log(formatTree(graph));
+      break;
+    case "list":
+    default:
+      console.log(formatList(graph));
       break;
   }
 }

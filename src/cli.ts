@@ -28,7 +28,7 @@ program
 program
   .command("graph")
   .argument("[directory]", "target directory", ".")
-  .option("-f, --format <format>", "output format: tree, dot, json", "tree")
+  .option("-f, --format <format>", "output format: list, tree, dot, json", "list")
   .description("Display the argument graph")
   .action(graphCommand);
 

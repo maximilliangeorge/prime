@@ -39,13 +39,13 @@ function getChildren(graph: ArgumentGraph, nodeKey: string): string[] {
     })
 }
 
-export interface FormatTreeOptions {
+export interface FormatOptions {
   color?: boolean
 }
 
-export function formatTree(
+export function formatList(
   graph: ArgumentGraph,
-  options: FormatTreeOptions = {},
+  options: FormatOptions = {},
 ): string {
   const { color = true } = options
 
@@ -175,6 +175,47 @@ export function formatTree(
 
   return lines.join('\n')
 }
+
+export function formatTree(graph: ArgumentGraph): string {
+  if (graph.nodes.size === 0) return ''
+
+  // Roots = nodes with no incoming edges (final conclusions)
+  const roots = findRoots(graph)
+
+  if (roots.length === 0) return ''
+
+  const lines: string[] = []
+  const globalVisited = new Set<string>()
+
+  function walk(nodeKey: string, prefix: string, isLast: boolean, isRoot: boolean): void {
+    const node = graph.nodes.get(nodeKey)!
+    const label = node.claim || node.relativePath
+
+    const connector = isRoot ? '' : isLast ? '└─ ' : '├─ '
+    const ref = globalVisited.has(nodeKey) ? ' (ref)' : ''
+    const suffix = node.isAxiom ? ' [axiom]' : ''
+    globalVisited.add(nodeKey)
+
+    lines.push(`${prefix}${connector}${label}${suffix}${ref}`)
+
+    if (ref) return // already expanded
+
+    const children = getChildren(graph, nodeKey)
+    const childPrefix = isRoot ? '' : prefix + (isLast ? '   ' : '│  ')
+    children.forEach((child, i) => {
+      walk(child, childPrefix, i === children.length - 1, false)
+    })
+  }
+
+  roots.forEach((root, rootIdx) => {
+    if (rootIdx > 0) lines.push('')
+    walk(root, '', true, true)
+  })
+
+  return lines.join('\n')
+}
+
+
 
 export function formatDot(graph: ArgumentGraph): string {
   const lines: string[] = ['digraph prime {', '  rankdir=BT;', '']
