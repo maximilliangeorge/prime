@@ -27,6 +27,11 @@ export async function graphCommand(
 
   const graph = buildGraph([...nodes, ...remoteNodes]);
 
+  if (options.depth !== undefined && options.format !== "tree") {
+    console.error(chalk.red("--depth is only supported with tree format (-f tree)"));
+    process.exit(1);
+  }
+
   switch (options.format) {
     case "dot":
       console.log(formatDot(graph));
