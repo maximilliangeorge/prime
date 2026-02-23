@@ -17,11 +17,13 @@
     "commander": "^12.1.0",
     "gray-matter": "^4.0.3",
     "js-yaml": "^4.1.0",
-    "simple-git": "^3.27.0"
+    "simple-git": "^3.27.0",
+    "treeify": "^1.1.0"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",
     "@types/node": "^22.10.0",
+    "@types/treeify": "^1.0.3",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "vitest": "^3.0.0"

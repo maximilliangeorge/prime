@@ -18,22 +18,33 @@ function buildValidTreeGraph() {
 }
 
 describe("formatTree", () => {
-  it("shows hierarchy with box-drawing chars", () => {
+  it("shows argument blocks with box-drawing chars", () => {
     const graph = buildValidTreeGraph();
-    const output = formatTree(graph);
+    const output = formatTree(graph, { color: false });
 
+    expect(output).toContain("Argument #1");
     expect(output).toContain("I think, therefore I am");
     expect(output).toContain("[axiom]");
+    expect(output).toContain("[conclusion]");
     // Should contain tree connectors
-    expect(output).toMatch(/[├└]── /);
+    expect(output).toMatch(/[┌├└]─/);
   });
 
-  it("marks axioms with [axiom]", () => {
+  it("marks axioms with [axiom] and conclusion with [conclusion]", () => {
     const graph = buildValidTreeGraph();
-    const output = formatTree(graph);
+    const output = formatTree(graph, { color: false });
 
     expect(output).toContain("Thinking is self-evident [axiom]");
     expect(output).toContain("Doubt presupposes a doubter [axiom]");
+    expect(output).toContain("I think, therefore I am [conclusion]");
+  });
+
+  it("lists premises before conclusion with correct connectors", () => {
+    const graph = buildValidTreeGraph();
+    const output = formatTree(graph, { color: false });
+
+    expect(output).toMatch(/┌─ \*/);
+    expect(output).toMatch(/└─ >/);
   });
 });
 

@@ -1,4 +1,7 @@
+import chalk from "chalk";
 import type { ArgumentGraph, PrimeNode } from "./types.js";
+
+const ARG_COLORS = ["cyan", "magenta", "yellow", "green", "blue", "red"] as const;
 
 function findRoots(graph: ArgumentGraph): string[] {
   const hasIncoming = new Set<string>();
@@ -21,44 +24,78 @@ function getChildren(graph: ArgumentGraph, nodeKey: string): string[] {
     .sort();
 }
 
-export function formatTree(graph: ArgumentGraph): string {
-  const roots = findRoots(graph);
-  if (roots.length === 0 && graph.nodes.size > 0) {
-    // All nodes in cycles — just list them
+export interface FormatTreeOptions {
+  color?: boolean;
+}
+
+export function formatTree(
+  graph: ArgumentGraph,
+  options: FormatTreeOptions = {},
+): string {
+  const { color = true } = options;
+
+  if (graph.nodes.size === 0) return "";
+
+  // Collect arguments: each non-axiom node with premises forms an argument
+  const args: { conclusion: string; premises: string[] }[] = [];
+  for (const [key, node] of graph.nodes) {
+    if (!node.isAxiom) {
+      const premises = getChildren(graph, key);
+      if (premises.length > 0) {
+        args.push({ conclusion: key, premises });
+      }
+    }
+  }
+
+  if (args.length === 0) {
+    // No arguments — just list axioms
     return Array.from(graph.nodes.values())
-      .map((n) => n.relativePath)
+      .map((n) => `${n.claim || n.relativePath} [axiom]`)
       .join("\n");
   }
 
+  // Sort arguments by conclusion label for stable output
+  args.sort((a, b) => {
+    const la = graph.nodes.get(a.conclusion)!;
+    const lb = graph.nodes.get(b.conclusion)!;
+    return (la.claim || la.relativePath).localeCompare(lb.claim || lb.relativePath);
+  });
+
   const lines: string[] = [];
-  const visited = new Set<string>();
+  const seen = new Set<string>();
 
-  function walk(key: string, prefix: string, isLast: boolean, isRoot: boolean): void {
-    const node = graph.nodes.get(key);
-    if (!node) return;
+  args.forEach((arg, argIdx) => {
+    const colorName = ARG_COLORS[argIdx % ARG_COLORS.length];
+    const c = color ? chalk[colorName] : (s: string) => s;
 
-    const connector = isRoot ? "" : isLast ? "└── " : "├── ";
-    const label = node.claim || node.relativePath;
-    const suffix = node.isAxiom ? " [axiom]" : "";
-
-    if (visited.has(key)) {
-      lines.push(`${prefix}${connector}${label}${suffix} (ref)`);
-      return;
+    if (argIdx > 0) {
+      lines.push("");
+      lines.push("---");
+      lines.push("");
     }
-    visited.add(key);
 
-    lines.push(`${prefix}${connector}${label}${suffix}`);
+    lines.push(c(`Argument #${argIdx + 1}`));
+    lines.push("");
 
-    const children = getChildren(graph, key);
-    const childPrefix = isRoot ? "" : prefix + (isLast ? "    " : "│   ");
-    children.forEach((child, i) => {
-      walk(child, childPrefix, i === children.length - 1, false);
+    // Premises
+    arg.premises.forEach((premKey, i) => {
+      const node = graph.nodes.get(premKey)!;
+      const label = node.claim || node.relativePath;
+      const suffix = node.isAxiom ? " [axiom]" : "";
+      const ref = seen.has(premKey) ? " (ref)" : "";
+      seen.add(premKey);
+
+      const connector = i === 0 ? "┌─" : "├─";
+      lines.push(`${c(`${connector} *`)} ${label}${suffix}${ref}`);
     });
-  }
 
-  roots.forEach((root, i) => {
-    walk(root, "", i === roots.length - 1, true);
-    if (i < roots.length - 1) lines.push("");
+    // Blank line before conclusion
+    lines.push(c("│"));
+
+    // Conclusion
+    const cNode = graph.nodes.get(arg.conclusion)!;
+    const cLabel = cNode.claim || cNode.relativePath;
+    lines.push(`${c("└─ >")} ${cLabel} [conclusion]`);
   });
 
   return lines.join("\n");
