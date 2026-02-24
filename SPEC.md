@@ -16,11 +16,13 @@ A **premise** is a reference from one node to another, declaring a logical depen
 
 An **axiom** is a node with no premises — a claim accepted without further justification. Axioms are leaf nodes in the graph. They may represent empirical observations, definitions, logical laws, or simply assumptions the author chooses not to defend further. A node is an axiom if and only if it has no `premises` field (or the field is empty).
 
+A **dispute** is a node that argues against a claim made in another node. The disputed claim is declared via a `disputes` field in YAML frontmatter, pointing to the target node via a prime URI. A dispute node typically also has `premises` supporting its counter-argument. The `disputes` link is metadata — it is not a logical edge in the argument DAG. A dispute says "my claim contradicts that claim"; the premises say why.
+
 The **argument graph** is the directed acyclic graph formed by premise relationships across all nodes. Edges point from a node to its premises ("depends on"). Cycles are invalid — they constitute circular reasoning.
 
 ## Node Format
 
-A node is a markdown file (`.md`) with optional YAML frontmatter. The only recognized frontmatter field is `premises`.
+A node is a markdown file (`.md`) with optional YAML frontmatter. The recognized frontmatter fields are `premises` and `disputes`.
 
 ### Minimal node (axiom)
 
@@ -52,13 +54,33 @@ the fact that [doubt presupposes a doubter](./doubt-presupposes-a-doubter.md),
 it follows that the doubting entity must exist.
 ```
 
+### Node disputing an external claim
+
+```markdown
+---
+disputes: prime://github.com/descartes/meditations/main/cogito.md
+premises:
+  - ./dreaming-argument.md
+  - ./bundle-theory.md
+---
+
+# The cogito does not establish a persistent self
+
+The cogito proves only that thinking is occurring, not that a
+unified, persistent self exists. From [the dreaming argument](./dreaming-argument.md)
+and [bundle theory](./bundle-theory.md), we can see that...
+```
+
+The `disputes` field is a single prime URI pointing to the claim being refuted. The node's own `premises` support its counter-argument. The `disputes` link is not a logical dependency — it identifies the target of disagreement.
+
 ### Rules
 
 1. The **claim** is the first H1 heading (`# ...`) in the file.
 2. The **premises** field is a YAML list of references to other node files. Each entry is either a relative file path or a prime URI.
 3. The **body** is free-form markdown. Authors argue in natural language. The body may contain links to premises (for readability) but the frontmatter is the authoritative declaration of logical dependencies.
 4. A file with no frontmatter, or with an empty/absent `premises` field, is an axiom.
-5. Each file should make exactly one claim. This is a convention, not a parse error.
+5. The **disputes** field is a single prime URI identifying a claim this node argues against. The `disputes` link is metadata, not a logical edge in the argument DAG. A node may have `disputes` with or without `premises`.
+6. Each file should make exactly one claim. This is a convention, not a parse error.
 
 ## URI Scheme
 
@@ -138,7 +160,9 @@ To construct the argument graph from a set of prime repositories:
 
 ```
 frontmatter  := "---\n" yaml_body "---\n"
-yaml_body    := "premises:\n" premise_list
+yaml_body    := [disputes_decl] [premise_decl]
+disputes_decl := "disputes: " prime_uri "\n"
+premise_decl := "premises:\n" premise_list
 premise_list := ("  - " reference "\n")*
 reference    := relative_path | prime_uri
 ```
