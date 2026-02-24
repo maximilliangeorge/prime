@@ -1,4 +1,6 @@
+import * as fs from 'node:fs'
 import chalk from 'chalk'
+import matter from 'gray-matter'
 import type { ArgumentGraph, PrimeNode } from './types.js'
 
 const ARG_COLORS = [
@@ -296,4 +298,228 @@ export function formatJson(graph: ArgumentGraph): string {
   }))
 
   return JSON.stringify({ nodes, edges }, null, 2)
+}
+
+// --- Structured formats for TUI ---
+
+export interface StructuredLine {
+  text: string
+  nodeKey?: string
+}
+
+/**
+ * Returns list-formatted lines with nodeKey annotations for selectable lines.
+ * Similar to formatList but returns structured data instead of a joined string.
+ */
+export function formatListStructured(graph: ArgumentGraph): StructuredLine[] {
+  if (graph.nodes.size === 0) return []
+
+  const args: { conclusion: string; premises: string[] }[] = []
+  for (const [key, node] of graph.nodes) {
+    if (!node.isAxiom) {
+      const premises = getChildren(graph, key)
+      if (premises.length > 0) {
+        args.push({ conclusion: key, premises })
+      }
+    }
+  }
+
+  if (args.length === 0) {
+    return Array.from(graph.nodes.entries()).map(([key, n]) => ({
+      text: `${n.claim || n.relativePath} [axiom]`,
+      nodeKey: key,
+    }))
+  }
+
+  // Reuse same topological sort logic as formatList
+  const conclusionSet = new Set(args.map((a) => a.conclusion))
+  const dependsOn = new Map<string, Set<string>>()
+  for (const arg of args) {
+    const deps = new Set<string>()
+    for (const p of arg.premises) {
+      if (conclusionSet.has(p)) deps.add(p)
+    }
+    dependsOn.set(arg.conclusion, deps)
+  }
+
+  const inDegree = new Map<string, number>()
+  for (const arg of args) inDegree.set(arg.conclusion, 0)
+  for (const [key, deps] of dependsOn) inDegree.set(key, deps.size)
+
+  const queue: string[] = []
+  for (const [key, deg] of inDegree) {
+    if (deg === 0) queue.push(key)
+  }
+  queue.sort((a, b) => {
+    const la = graph.nodes.get(a)!
+    const lb = graph.nodes.get(b)!
+    return (la.claim || la.relativePath).localeCompare(lb.claim || lb.relativePath)
+  })
+
+  const sorted: string[] = []
+  while (queue.length > 0) {
+    const cur = queue.shift()!
+    sorted.push(cur)
+    for (const [key, deps] of dependsOn) {
+      if (deps.has(cur)) {
+        deps.delete(cur)
+        const newDeg = inDegree.get(key)! - 1
+        inDegree.set(key, newDeg)
+        if (newDeg === 0) {
+          const label = (n: string) => {
+            const node = graph.nodes.get(n)!
+            return node.claim || node.relativePath
+          }
+          const idx = queue.findIndex((q) => label(key).localeCompare(label(q)) < 0)
+          if (idx === -1) queue.push(key)
+          else queue.splice(idx, 0, key)
+        }
+      }
+    }
+  }
+
+  const orderMap = new Map(sorted.map((key, i) => [key, i]))
+  args.sort(
+    (a, b) => (orderMap.get(a.conclusion) ?? 0) - (orderMap.get(b.conclusion) ?? 0),
+  )
+
+  const lines: StructuredLine[] = []
+  const seen = new Set<string>()
+
+  args.forEach((arg, argIdx) => {
+    if (argIdx > 0) {
+      lines.push({ text: '' })
+      lines.push({ text: '' })
+    }
+
+    lines.push({ text: `${argIdx + 1})` })
+    lines.push({ text: '' })
+
+    arg.premises.forEach((premKey, i) => {
+      const node = graph.nodes.get(premKey)!
+      const label = node.claim || node.relativePath
+      const suffix = node.isAxiom ? ' [axiom]' : ''
+      const ref = seen.has(premKey) ? ' (ref)' : ''
+      seen.add(premKey)
+
+      const connector = i === 0 ? '┌─' : '├─'
+      lines.push({
+        text: `${connector} * ${label}${suffix}${ref}`,
+        nodeKey: premKey,
+      })
+    })
+
+    lines.push({ text: '│' })
+
+    const cNode = graph.nodes.get(arg.conclusion)!
+    const cLabel = cNode.claim || cNode.relativePath
+    lines.push({
+      text: `└─ > ${cLabel} [conclusion]`,
+      nodeKey: arg.conclusion,
+    })
+  })
+
+  return lines
+}
+
+/**
+ * Returns tree-formatted lines with nodeKey annotations for selectable lines.
+ */
+export function formatTreeStructured(graph: ArgumentGraph): StructuredLine[] {
+  if (graph.nodes.size === 0) return []
+
+  const roots = findRoots(graph)
+  if (roots.length === 0) return []
+
+  const lines: StructuredLine[] = []
+  const globalVisited = new Set<string>()
+
+  function walk(
+    nodeKey: string,
+    prefix: string,
+    isLast: boolean,
+    isRoot: boolean,
+  ): void {
+    const node = graph.nodes.get(nodeKey)!
+    const label = node.claim || node.relativePath
+
+    const connector = isRoot ? '' : isLast ? '└─ ' : '├─ '
+    const ref = globalVisited.has(nodeKey) ? ' (ref)' : ''
+    const suffix = node.isAxiom ? ' [axiom]' : ''
+    globalVisited.add(nodeKey)
+
+    lines.push({
+      text: `${prefix}${connector}${label}${suffix}${ref}`,
+      nodeKey,
+    })
+
+    if (ref) return
+
+    const children = getChildren(graph, nodeKey)
+    const childPrefix = isRoot ? '' : prefix + (isLast ? '   ' : '│  ')
+    children.forEach((child, i) => {
+      walk(child, childPrefix, i === children.length - 1, false)
+    })
+  }
+
+  roots.forEach((root, rootIdx) => {
+    if (rootIdx > 0) lines.push({ text: '' })
+    walk(root, '', true, true)
+  })
+
+  return lines
+}
+
+/**
+ * Format a node's detail view: claim, type, premises, and body.
+ */
+export function formatNodeDetail(node: PrimeNode): string[] {
+  const lines: string[] = []
+
+  lines.push(`Claim:  ${node.claim ?? '(none)'}`)
+
+  if (node.isAxiom) {
+    lines.push('Type:   axiom (no premises)')
+  } else {
+    lines.push(`Type:   derived (${node.premises.length} premise${node.premises.length === 1 ? '' : 's'})`)
+  }
+
+  lines.push(`File:   ${node.relativePath}`)
+
+  if (!node.isAxiom && node.premises.length > 0) {
+    lines.push('')
+    lines.push('Premises:')
+    for (let i = 0; i < node.premises.length; i++) {
+      lines.push(`  ${i + 1}. ${node.premises[i].raw}`)
+    }
+  }
+
+  // Read body from file if it exists on disk
+  try {
+    const content = fs.readFileSync(node.filePath, 'utf-8')
+    const { content: body } = matter(content)
+    const bodyWithoutH1 = body.replace(/^#\s+.+\n?/, '').trim()
+    if (bodyWithoutH1) {
+      lines.push('──────────────────────────────────────')
+      lines.push(...bodyWithoutH1.split('\n'))
+    }
+  } catch {
+    // File might be a remote node or inaccessible — skip body
+  }
+
+  return lines
+}
+
+/**
+ * Count arguments (non-axiom nodes with premises) in the graph.
+ */
+export function countArguments(graph: ArgumentGraph): number {
+  let count = 0
+  for (const [key, node] of graph.nodes) {
+    if (!node.isAxiom) {
+      const premises = getChildren(graph, key)
+      if (premises.length > 0) count++
+    }
+  }
+  return count
 }

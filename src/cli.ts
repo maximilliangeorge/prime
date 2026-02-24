@@ -5,6 +5,7 @@ import { initCommand } from "./commands/init.js";
 import { validateCommand } from "./commands/validate.js";
 import { graphCommand } from "./commands/graph.js";
 import { showCommand } from "./commands/show.js";
+import { browseCommand } from "./commands/browse.js";
 
 const program = new Command();
 
@@ -38,5 +39,11 @@ program
   .argument("<reference>", "local path or prime:// URI")
   .description("Show the content of a node")
   .action(showCommand);
+
+program
+  .command("browse")
+  .argument("[directory]", "target directory", ".")
+  .description("Interactively browse the argument graph")
+  .action(browseCommand);
 
 program.parse();
