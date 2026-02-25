@@ -2,19 +2,15 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import yaml from "js-yaml";
 import type { PrimeManifest } from "./types.js";
+import { readCachedFileByRef } from "./cache.js";
 
-export function loadManifest(rootDir: string): PrimeManifest {
-  const manifestPath = path.join(rootDir, "prime.yaml");
+const EMPTY_MANIFEST: PrimeManifest = { remotes: {}, exports: [] };
 
-  if (!fs.existsSync(manifestPath)) {
-    return { remotes: {}, exports: [] };
-  }
-
-  const content = fs.readFileSync(manifestPath, "utf-8");
+export function parseManifestContent(content: string): PrimeManifest {
   const data = yaml.load(content) as Record<string, unknown> | null;
 
   if (!data || typeof data !== "object") {
-    return { remotes: {}, exports: [] };
+    return { ...EMPTY_MANIFEST };
   }
 
   const remotes: Record<string, string> = {};
@@ -31,4 +27,24 @@ export function loadManifest(rootDir: string): PrimeManifest {
     : [];
 
   return { remotes, exports };
+}
+
+export function loadManifest(rootDir: string): PrimeManifest {
+  const manifestPath = path.join(rootDir, "prime.yaml");
+
+  if (!fs.existsSync(manifestPath)) {
+    return { ...EMPTY_MANIFEST };
+  }
+
+  const content = fs.readFileSync(manifestPath, "utf-8");
+  return parseManifestContent(content);
+}
+
+export async function loadManifestFromCache(
+  ref: string,
+  cacheDir: string
+): Promise<PrimeManifest> {
+  const content = await readCachedFileByRef(ref, "prime.yaml", cacheDir);
+  if (!content) return { ...EMPTY_MANIFEST };
+  return parseManifestContent(content);
 }

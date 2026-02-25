@@ -14,7 +14,7 @@ export async function showCommand(reference: string): Promise<void> {
   let content: string;
   let node: PrimeNode;
 
-  if (reference.startsWith("prime://")) {
+  if (reference.startsWith("prime://") || reference.startsWith("https://")) {
     // Remote URI
     const parsed = parseUri(reference);
     if (!parsed) {

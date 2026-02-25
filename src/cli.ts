@@ -16,19 +16,19 @@ program
 
 program
   .command("init")
-  .argument("[directory]", "target directory", ".")
+  .argument("[directory]", "local directory or remote URL", ".")
   .description("Initialize a new prime repository")
   .action(initCommand);
 
 program
   .command("validate")
-  .argument("[directory]", "target directory", ".")
+  .argument("[directory]", "local directory or remote URL", ".")
   .description("Validate the argument graph")
   .action(validateCommand);
 
 program
   .command("graph")
-  .argument("[directory]", "target directory", ".")
+  .argument("[directory]", "local directory or remote URL", ".")
   .option("-f, --format <format>", "output format: list, tree, dot, json", "list")
   .option("-d, --depth <depth>", "max tree depth (tree format only)", parseInt)
   .description("Display the argument graph")
@@ -42,7 +42,7 @@ program
 
 program
   .command("browse")
-  .argument("[directory]", "target directory", ".")
+  .argument("[directory]", "local directory or remote URL", ".")
   .description("Interactively browse the argument graph")
   .action(browseCommand);
 

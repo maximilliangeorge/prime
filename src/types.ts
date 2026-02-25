@@ -13,6 +13,17 @@ export interface PrimeAliasUri {
   path: string;
 }
 
+export interface PrimeRepoUri {
+  host: string;
+  owner: string;
+  repo: string;
+  ref: string;
+  commit: string | null;
+  immutable: boolean;
+  /** true when ref was not explicitly specified and should be resolved from HEAD */
+  defaultRef?: boolean;
+}
+
 export type ParsedUri = PrimeUri | PrimeAliasUri;
 
 export function isAliasUri(uri: ParsedUri): uri is PrimeAliasUri {

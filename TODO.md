@@ -6,6 +6,8 @@ Issues and considerations for making `prime://` remote resolution work reliably 
 
 - [x] **Bare clone ref mismatch** — `readCachedFile` used `origin/<ref>` but bare clones store refs under `refs/heads/*`, not `refs/remotes/origin/*`. Fixed by using `uri.ref` directly.
 - [x] **Fetch refspec** — `git fetch origin` in a bare clone doesn't update `refs/heads/*` by default. Fixed with explicit `+refs/heads/*:refs/heads/*` refspec.
+- [x] **Allow URLs (https://github.com/owner/repo/blob/main/path/to/file.md) for Github in premises list** – This makes it easier to copy-pase.
+- [x] **Allow querying a root Git repository** – Check for a prime.yaml at root and use it to build the tree.
 
 ## URI Scheme
 
@@ -41,3 +43,7 @@ Issues and considerations for making `prime://` remote resolution work reliably 
 - [ ] **Paths with special characters** — Spaces, unicode, `#`, `?` in file paths could break parsing or `git show`.
 - [ ] **Trailing slashes** — `prime://host/owner/repo/main/dir/` (pointing at a directory, not a file) is not handled.
 - [ ] **Case sensitivity** — Some Git hosts are case-insensitive for owner/repo but case-sensitive for paths. Cache dir naming should normalize host/owner/repo but preserve path case.
+
+## Handle Unconventional Directory Structures
+
+- [ ] **Same filenames, different directories** – The tool handles deeply nested files well but this means that the same filename can appear multiple times. This should trigger an error in all attempts to parse the repo.
