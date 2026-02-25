@@ -1,7 +1,7 @@
 ---
 premises:
-  - prime://github.com/maximilliangeorge/prime/main/examples/cogito/reliable-truth.md
-  - prime://github.com/maximilliangeorge/prime/main/examples/cogito/perception-of-world.md
+  - https://github.com/maximilliangeorge/prime-demo-cogito/blob/main/reliable-truth.md
+  - https://github.com/maximilliangeorge/prime-demo-cogito/blob/main/perception-of-world.md
 ---
 
 # The external world exists
