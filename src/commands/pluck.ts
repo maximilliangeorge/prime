@@ -3,27 +3,57 @@ import chalk from "chalk";
 import ora from "ora";
 import { loadRepoSource } from "../repo-source.js";
 import { buildGraph } from "../graph-builder.js";
-import type { ArgumentGraph, PrimeNode } from "../types.js";
+import { parseUri, expandAlias, isRemoteUrl } from "../uri.js";
+import { loadManifest } from "../manifest.js";
+import { isAliasUri } from "../types.js";
+import type { ArgumentGraph, PrimeUri } from "../types.js";
 
 export async function pluckCommand(
   reference: string,
   options: { depth?: number }
 ): Promise<void> {
-  const isRemote =
-    reference.startsWith("prime://") || reference.startsWith("https://");
+  let resolvedPath: string;
+  let sourceInput: string;
+  let spinnerText: string;
 
-  if (isRemote) {
-    console.error(
-      chalk.red("pluck currently supports local paths only.")
-    );
-    process.exit(1);
+  if (isRemoteUrl(reference)) {
+    const parsed = parseUri(reference);
+    if (!parsed) {
+      console.error(chalk.red(`Invalid URI: ${reference}`));
+      process.exit(1);
+    }
+
+    let uri: PrimeUri;
+    if (isAliasUri(parsed)) {
+      const manifest = loadManifest(process.cwd());
+      const expanded = expandAlias(parsed, manifest);
+      if (!expanded) {
+        console.error(chalk.red(`Unknown alias: @${parsed.alias}`));
+        process.exit(1);
+      }
+      uri = expanded;
+    } else {
+      uri = parsed;
+    }
+
+    sourceInput = `https://${uri.host}/${uri.owner}/${uri.repo}/tree/${uri.ref}`;
+    resolvedPath = `prime://${uri.host}/${uri.owner}/${uri.repo}/${uri.ref}/${uri.path}`;
+    spinnerText = `Fetching ${uri.owner}/${uri.repo}…`;
+  } else {
+    resolvedPath = path.resolve(reference);
+    sourceInput = process.cwd();
+    spinnerText = "Loading argument graph…";
   }
 
-  const resolvedPath = path.resolve(reference);
-  const rootDir = process.cwd();
-
-  const spinner = ora("Loading argument graph…").start();
-  const { nodes, remoteNodes } = await loadRepoSource(rootDir);
+  const spinner = ora(spinnerText).start();
+  let nodes, remoteNodes;
+  try {
+    ({ nodes, remoteNodes } = await loadRepoSource(sourceInput));
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    spinner.fail(`Failed to load: ${msg}`);
+    process.exit(1);
+  }
 
   if (nodes.length === 0) {
     spinner.stop();
