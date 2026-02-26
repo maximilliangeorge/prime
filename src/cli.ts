@@ -6,6 +6,7 @@ import { validateCommand } from "./commands/validate.js";
 import { graphCommand } from "./commands/graph.js";
 import { showCommand } from "./commands/show.js";
 import { browseCommand } from "./commands/browse.js";
+import { pluckCommand } from "./commands/pluck.js";
 
 const program = new Command();
 
@@ -39,6 +40,13 @@ program
   .argument("<reference>", "local path or prime:// URI")
   .description("Show the content of a node")
   .action(showCommand);
+
+program
+  .command("pluck")
+  .argument("<reference>", "local path to a node file")
+  .option("-d, --depth <depth>", "max premise depth (-1 for unlimited)", parseInt)
+  .description("Extract a claim and its premises as a self-contained document")
+  .action(pluckCommand);
 
 program
   .command("browse")

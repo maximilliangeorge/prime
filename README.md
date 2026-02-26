@@ -152,6 +152,12 @@ Display the argument graph. Supports multiple output formats:
 
 Display a single node. Accepts a local file path or a `prime://` URI. Shows the claim, its type (axiom or derived), premises, and body text.
 
+### `npx prime-md pluck <ref>`
+
+Extract a claim and its full premise structure as a self-contained markdown document. Each premise is expanded inline with its type, body, and sub-premises, using hierarchical numbering (`1:`, `1.1:`, `1.1.1:`, etc.). Use `--depth` to limit how deep premises are expanded.
+
+Designed for handing off a partial view of an argument to an LLM for evaluation.
+
 ## Contributing
 
 [CODE BUT ALSO USING THE TOOL AND BUILDING THE GRAPH; CALL TO PHILOSOPHERS AND SCIENTISTS]
