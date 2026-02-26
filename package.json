@@ -1,6 +1,6 @@
 {
   "name": "prime-md",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A machine-readable graph of truth claims, built on Git and Markdown.",
   "type": "module",
   "bin": {
