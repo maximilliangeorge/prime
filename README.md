@@ -54,9 +54,9 @@ You can also install Prime globally with `npm install -g prime-md`.
 
 Every `.md` file in a prime repository represents a claim and a node in the graph. One file, one claim. The H1 heading is the claim itself — the thing being asserted. The body is optional; use it for elaboration, evidence, or context. Prime does not parse or validate the body. It only cares about structure. But whoever is reading your claim will probably want you to elaborate on it.
 
-There are two kinds of claims: axioms and derived claims.
+There are two kinds of claims: axiomatic claims and derived claims.
 
-### Axioms
+### Axiomatic Claims
 
 An axiom is a claim with no premises. It stands on its own — accepted without argument. In practice, these are your starting points: definitions, observations, or assumptions you choose not to defend further.
 
