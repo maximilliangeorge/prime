@@ -10,7 +10,7 @@ A _valid_ argument is one where the truth of the premises logically guarantees t
 
 If a premise is false, the argument is not _invalid_ but it is _unsound_. The structure still holds; the foundation does not.
 
-What makes a premise false? It, in turn, relies on an either _invalid_ argument or _unsound_ premises (or both!). Every claim rests on other claims and the rot can enter at any level. In the world of code we might call this a dependency graph. A graph can be traversed, and indexed by machine. Follow the chain down and you hit bedrock: unsupported claims, e.g. axiomatic truths that can be accepted without argument.
+What makes a premise false? It, in turn, relies on an argument that is either _invalid_ or _unsound_ (_unsound_, as in one that relies on premises that are themselves false). Notice the recusion – every claim rests on other claims and the rot can enter at any level. In the world of code we might call this a dependency graph. A graph can be traversed, and indexed by machine. Follow the chain down and you hit bedrock: unsupported claims, e.g. axiomatic truths that can be accepted without argument.
 
 In Prime, we store each claim as a Markdown file in a Git repository. Git already solves the hard problems: versioning, integrity, distribution, attribution. Repositories can reference each other — so an argument in one repo can cite a premise in another, across authors, institutions, and time. The graph is not trapped in one database. It lives where code lives, and it moves the way code moves. And I hope Prime can make deductive reasoning scale the way code scales.
 
