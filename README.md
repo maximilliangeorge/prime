@@ -460,6 +460,12 @@ Check out the examples in the [examples](examples) directory.
 
 ## Contributing
 
-[CODE BUT ALSO USING THE TOOL AND BUILDING THE GRAPH; CALL TO PHILOSOPHERS AND SCIENTISTS]
+Prime needs two kinds of contribution: better tooling and better arguments.
+
+**Build the graph.** The tools are only as valuable as the ecosystem they power. If you work in philosophy, science, law, theology, economics, or any field where conclusions depend on premises — write them down. Run `npx prime-md init`, break a claim into its premises, and commit. No code required.
+
+**Improve the tools.** Bug reports, feature ideas, and pull requests are welcome. See the [open issues](https://github.com/maximilliangeorge/prime-md/issues).
 
 ## License
+
+[MIT](LICENSE)
