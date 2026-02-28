@@ -1,6 +1,6 @@
 # Prime
 
-A machine-readable graph of truth claims, built on Git and Markdown.
+A machine-readable graph of truth claims, built on Git and Markdown; infrastructure for deductive reasoning at scale.
 
 ![Prime Screenshot](/Tree.png?raw=true)
 
