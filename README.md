@@ -2,7 +2,7 @@
 
 A machine-readable graph of truth claims, built on Git and Markdown.
 
-![Prime Screenshot](/Screenshot.png?raw=true)
+![Prime Screenshot](/Tree.png?raw=true)
 
 ## What is Prime?
 
