@@ -57,3 +57,50 @@ describe("parseNode", () => {
     }
   });
 });
+
+const counterFixture = path.join(fixtures, "counter");
+
+describe("parseNode — counters", () => {
+  it("parses counters from frontmatter", () => {
+    const node = parseNode(
+      path.join(counterFixture, "objection.md"),
+      counterFixture
+    );
+    expect(node.counters).toHaveLength(1);
+    expect(node.counters[0].kind).toBe("local");
+    expect(node.counters[0].raw).toBe("./claim.md");
+    expect(node.counters[0].resolvedPath).toBe(
+      path.join(counterFixture, "claim.md")
+    );
+  });
+
+  it("node with counters but no premises is still an axiom", () => {
+    const node = parseNode(
+      path.join(counterFixture, "objection.md"),
+      counterFixture
+    );
+    expect(node.isAxiom).toBe(true);
+    expect(node.counters).toHaveLength(1);
+    expect(node.premises).toHaveLength(0);
+  });
+
+  it("node can have both premises and counters", () => {
+    const node = parseNode(
+      path.join(counterFixture, "supported-objection.md"),
+      counterFixture
+    );
+    expect(node.isAxiom).toBe(false);
+    expect(node.premises).toHaveLength(1);
+    expect(node.counters).toHaveLength(1);
+    expect(node.premises[0].raw).toBe("./evidence.md");
+    expect(node.counters[0].raw).toBe("./objection.md");
+  });
+
+  it("nodes without counters have empty counters array", () => {
+    const node = parseNode(
+      path.join(counterFixture, "claim.md"),
+      counterFixture
+    );
+    expect(node.counters).toHaveLength(0);
+  });
+});

@@ -98,20 +98,20 @@ function rewriteLocalPremises(
   repoUri: PrimeRepoUri,
   filePath: string
 ): void {
-  for (const premise of node.premises) {
-    if (premise.kind !== "local") continue;
+  for (const ref of [...node.premises, ...node.counters]) {
+    if (ref.kind !== "local") continue;
 
-    const localPath = premise.raw.replace(/^\.\//, "");
+    const localPath = ref.raw.replace(/^\.\//, "");
     const baseDir = filePath.includes("/")
       ? filePath.substring(0, filePath.lastIndexOf("/") + 1)
       : "";
     const resolvedPath = baseDir + localPath;
     const syntheticUri = `https://${repoUri.host}/${repoUri.owner}/${repoUri.repo}/blob/${repoUri.ref}/${resolvedPath}`;
 
-    premise.kind = "remote";
-    premise.raw = syntheticUri;
-    premise.resolvedPath = syntheticUri;
-    premise.uri = {
+    ref.kind = "remote";
+    ref.raw = syntheticUri;
+    ref.resolvedPath = syntheticUri;
+    ref.uri = {
       host: repoUri.host,
       owner: repoUri.owner,
       repo: repoUri.repo,

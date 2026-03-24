@@ -101,6 +101,66 @@ describe("validate", () => {
     expect(cycleError).toBeDefined();
   });
 
+  it("builds counter edges with correct type", () => {
+    const rootDir = path.join(fixtures, "counter");
+    const nodes = parseFixture("counter", [
+      "claim.md",
+      "objection.md",
+      "evidence.md",
+      "supported-objection.md",
+    ]);
+    const graph = buildGraph(nodes);
+
+    const counterEdges = graph.edges.filter((e) => e.type === "counter");
+    const premiseEdges = graph.edges.filter((e) => e.type === "premise");
+
+    expect(counterEdges).toHaveLength(2); // objection→claim, supported-objection→objection
+    expect(premiseEdges).toHaveLength(1); // supported-objection→evidence
+  });
+
+  it("allows counter-cycles (mutual objection)", () => {
+    const rootDir = path.join(fixtures, "counter-cycle");
+    const nodes = parseFixture("counter-cycle", ["a.md", "b.md"]);
+    const graph = buildGraph(nodes);
+    const result = validate(graph, rootDir);
+
+    // Counter-cycles should NOT be errors
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+
+    // But the counter edges should exist
+    const counterEdges = graph.edges.filter((e) => e.type === "counter");
+    expect(counterEdges).toHaveLength(2);
+  });
+
+  it("reports broken counter references", () => {
+    const rootDir = path.join(fixtures, "counter");
+    const node = {
+      filePath: path.join(rootDir, "broken-counter.md"),
+      relativePath: "broken-counter.md",
+      claim: "Broken counter",
+      body: null,
+      premises: [],
+      counters: [
+        {
+          kind: "local" as const,
+          raw: "./nonexistent.md",
+          resolvedPath: path.join(rootDir, "nonexistent.md"),
+        },
+      ],
+      isAxiom: true,
+    };
+    const graph = buildGraph([node]);
+    const result = validate(graph, rootDir);
+
+    expect(result.valid).toBe(false);
+    const brokenError = result.errors.find((e) =>
+      e.message.includes("Broken reference")
+    );
+    expect(brokenError).toBeDefined();
+    expect(brokenError!.message).toContain("nonexistent.md");
+  });
+
   it("reports missing H1 as warning", () => {
     const rootDir = path.join(fixtures, "valid-tree");
     // Create a node with no claim
@@ -108,7 +168,9 @@ describe("validate", () => {
       filePath: path.join(rootDir, "no-claim.md"),
       relativePath: "no-claim.md",
       claim: null,
+      body: null,
       premises: [],
+      counters: [],
       isAxiom: true,
     };
     const graph = buildGraph([node]);

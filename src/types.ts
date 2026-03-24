@@ -44,6 +44,7 @@ export interface PrimeNode {
   claim: string | null;
   body: string | null;
   premises: PremiseRef[];
+  counters: PremiseRef[];
   isAxiom: boolean;
 }
 
@@ -54,7 +55,7 @@ export interface PrimeManifest {
 
 export interface ArgumentGraph {
   nodes: Map<string, PrimeNode>;
-  edges: { from: string; to: string }[];
+  edges: { from: string; to: string; type: "premise" | "counter" }[];
 }
 
 export interface ValidationError {

@@ -25,7 +25,10 @@ function resolveUriFromRaw(
 }
 
 export function hasRemotePremises(nodes: PrimeNode[]): boolean {
-  return nodes.some((n) => n.premises.some((p) => p.kind === "remote"));
+  return nodes.some((n) =>
+    n.premises.some((p) => p.kind === "remote") ||
+    n.counters.some((p) => p.kind === "remote")
+  );
 }
 
 export async function resolveAllPremises(
@@ -42,6 +45,18 @@ export async function resolveAllPremises(
       if (premise.kind === "remote") {
         await resolveRemotePremise(
           premise,
+          manifest,
+          visited,
+          remoteNodes,
+          0,
+          maxDepth
+        );
+      }
+    }
+    for (const counter of node.counters) {
+      if (counter.kind === "remote") {
+        await resolveRemotePremise(
+          counter,
           manifest,
           visited,
           remoteNodes,
@@ -92,8 +107,8 @@ async function resolveRemotePremise(
     // Fix relativePath to be the URI path component
     remoteNode.relativePath = uri.path;
 
-    // Resolve premises within the remote node
-    for (const remotePremise of remoteNode.premises) {
+    // Resolve premises and counters within the remote node
+    for (const remotePremise of [...remoteNode.premises, ...remoteNode.counters]) {
       if (remotePremise.kind === "remote") {
         if (maxDepth === -1 || currentDepth + 1 < maxDepth) {
           await resolveRemotePremise(

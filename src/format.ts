@@ -13,7 +13,9 @@ const ARG_COLORS = [
 function findRoots(graph: ArgumentGraph): string[] {
   const hasIncoming = new Set<string>()
   for (const edge of graph.edges) {
-    hasIncoming.add(edge.to)
+    if (edge.type === 'premise') {
+      hasIncoming.add(edge.to)
+    }
   }
   const roots: string[] = []
   for (const key of graph.nodes.keys()) {
@@ -24,9 +26,9 @@ function findRoots(graph: ArgumentGraph): string[] {
   return roots.sort()
 }
 
-function getChildren(graph: ArgumentGraph, nodeKey: string): string[] {
+function getChildren(graph: ArgumentGraph, nodeKey: string, edgeType: "premise" | "counter" = "premise"): string[] {
   return graph.edges
-    .filter((e) => e.from === nodeKey)
+    .filter((e) => e.from === nodeKey && e.type === edgeType)
     .map((e) => e.to)
     .sort((a, b) => {
       const na = graph.nodes.get(a)!
@@ -174,6 +176,17 @@ export function formatList(
     const cNode = graph.nodes.get(arg.conclusion)!
     const cLabel = cNode.claim || cNode.relativePath
     lines.push(`${c('└─ >')} ${cLabel} [conclusion]`)
+
+    // Counter annotations
+    const counterTargets = getChildren(graph, arg.conclusion, 'counter')
+    if (counterTargets.length > 0) {
+      for (const target of counterTargets) {
+        const tNode = graph.nodes.get(target)!
+        const tLabel = tNode.claim || tNode.relativePath
+        const counterMark = color ? chalk.red('⚡ counters:') : '⚡ counters:'
+        lines.push(`   ${counterMark} ${tLabel}`)
+      }
+    }
   })
 
   return lines.join('\n')
@@ -231,17 +244,24 @@ export function formatTree(
 
     if (ref) return // already expanded
 
+    // Show counter annotations
+    const counterTargets = getChildren(graph, nodeKey, 'counter')
+    const childPrefix = isRoot ? '' : prefix + (isLast ? '   ' : '│  ')
+    for (const target of counterTargets) {
+      const tNode = graph.nodes.get(target)!
+      const tLabel = tNode.claim || tNode.relativePath
+      lines.push(`${childPrefix}⚡ counters: ${tLabel}`)
+    }
+
     const children = getChildren(graph, nodeKey)
 
     if (maxDepth !== undefined && depth >= maxDepth) {
       if (children.length > 0) {
         const remaining = countDescendants(graph, nodeKey, new Set(globalVisited))
-        const childPrefix = isRoot ? '' : prefix + (isLast ? '   ' : '│  ')
         lines.push(`${childPrefix}└─ (+${remaining} more)`)
       }
       return
     }
-    const childPrefix = isRoot ? '' : prefix + (isLast ? '   ' : '│  ')
     children.forEach((child, i) => {
       walk(child, childPrefix, i === children.length - 1, false, depth + 1)
     })
@@ -258,21 +278,39 @@ export function formatTree(
 export function formatDot(graph: ArgumentGraph): string {
   const lines: string[] = ['digraph prime {', '  rankdir=BT;', '']
 
+  // Identify nodes that have counters for styling
+  const hasCounters = new Set<string>()
+  for (const [key, node] of graph.nodes) {
+    if (node.counters.length > 0) hasCounters.add(key)
+  }
+
   // Node declarations
   for (const [key, node] of graph.nodes) {
     const label = (node.claim || node.relativePath).replace(/"/g, '\\"')
     const shape = node.isAxiom ? 'box' : 'ellipse'
-    lines.push(`  "${node.relativePath}" [label="${label}", shape=${shape}];`)
+    const counterStyle = hasCounters.has(key) ? ', style=filled, fillcolor="#fff0f0"' : ''
+    lines.push(`  "${node.relativePath}" [label="${label}", shape=${shape}${counterStyle}];`)
   }
 
   lines.push('')
 
-  // Edges (from node to premise, i.e. "depends on")
+  // Premise edges (solid, "depends on")
   for (const edge of graph.edges) {
+    if (edge.type !== 'premise') continue
     const fromNode = graph.nodes.get(edge.from)
     const toNode = graph.nodes.get(edge.to)
     if (fromNode && toNode) {
       lines.push(`  "${fromNode.relativePath}" -> "${toNode.relativePath}";`)
+    }
+  }
+
+  // Counter edges (dashed red, "objects to")
+  for (const edge of graph.edges) {
+    if (edge.type !== 'counter') continue
+    const fromNode = graph.nodes.get(edge.from)
+    const toNode = graph.nodes.get(edge.to)
+    if (fromNode && toNode) {
+      lines.push(`  "${fromNode.relativePath}" -> "${toNode.relativePath}" [style=dashed, color=red, arrowhead=open];`)
     }
   }
 
@@ -299,12 +337,14 @@ export function formatJson(graph: ArgumentGraph): string {
       claim: node.claim,
       isAxiom: node.isAxiom,
       premises: node.premises.map((p) => p.raw),
+      counters: node.counters.map((p) => p.raw),
     }
   }
 
   const edges = graph.edges.map((e) => ({
     from: graph.nodes.get(e.from)?.relativePath || e.from,
     to: graph.nodes.get(e.to)?.relativePath || e.to,
+    type: e.type,
   }))
 
   return JSON.stringify({ nodes, edges }, null, 2)
@@ -427,6 +467,17 @@ export function formatListStructured(graph: ArgumentGraph): StructuredLine[] {
       text: `└─ > ${cLabel} [conclusion]`,
       nodeKey: arg.conclusion,
     })
+
+    // Counter annotations
+    const counterTargets = getChildren(graph, arg.conclusion, 'counter')
+    for (const target of counterTargets) {
+      const tNode = graph.nodes.get(target)!
+      const tLabel = tNode.claim || tNode.relativePath
+      lines.push({
+        text: `   ⚡ counters: ${tLabel}`,
+        nodeKey: target,
+      })
+    }
   })
 
   return lines
@@ -465,8 +516,19 @@ export function formatTreeStructured(graph: ArgumentGraph): StructuredLine[] {
 
     if (ref) return
 
-    const children = getChildren(graph, nodeKey)
+    // Counter annotations
+    const counterTargets = getChildren(graph, nodeKey, 'counter')
     const childPrefix = isRoot ? '' : prefix + (isLast ? '   ' : '│  ')
+    for (const target of counterTargets) {
+      const tNode = graph.nodes.get(target)!
+      const tLabel = tNode.claim || tNode.relativePath
+      lines.push({
+        text: `${childPrefix}⚡ counters: ${tLabel}`,
+        nodeKey: target,
+      })
+    }
+
+    const children = getChildren(graph, nodeKey)
     children.forEach((child, i) => {
       walk(child, childPrefix, i === children.length - 1, false)
     })
@@ -501,6 +563,14 @@ export function formatNodeDetail(node: PrimeNode): string[] {
     lines.push('Premises:')
     for (let i = 0; i < node.premises.length; i++) {
       lines.push(`  ${i + 1}. ${node.premises[i].raw}`)
+    }
+  }
+
+  if (node.counters.length > 0) {
+    lines.push('')
+    lines.push('Counters:')
+    for (let i = 0; i < node.counters.length; i++) {
+      lines.push(`  ${i + 1}. ${node.counters[i].raw}`)
     }
   }
 

@@ -11,11 +11,16 @@ export function buildGraph(nodes: PrimeNode[]): ArgumentGraph {
     nodeMap.set(node.filePath, node);
   }
 
-  const edges: { from: string; to: string }[] = [];
+  const edges: { from: string; to: string; type: "premise" | "counter" }[] = [];
   for (const node of nodes) {
     for (const premise of node.premises) {
       if (premise.resolvedPath) {
-        edges.push({ from: node.filePath, to: premise.resolvedPath });
+        edges.push({ from: node.filePath, to: premise.resolvedPath, type: "premise" });
+      }
+    }
+    for (const counter of node.counters) {
+      if (counter.resolvedPath) {
+        edges.push({ from: node.filePath, to: counter.resolvedPath, type: "counter" });
       }
     }
   }
@@ -38,6 +43,7 @@ export function detectCycles(graph: ArgumentGraph): string[][] {
     color.set(key, WHITE);
   }
   for (const edge of graph.edges) {
+    if (edge.type !== "premise") continue;
     const list = adj.get(edge.from);
     if (list) list.push(edge.to);
   }
@@ -89,19 +95,19 @@ export function validate(
     }
   }
 
-  // Check for broken references
+  // Check for broken references (premises and counters)
   for (const [filePath, node] of graph.nodes) {
-    for (const premise of node.premises) {
-      if (premise.error) {
+    for (const ref of [...node.premises, ...node.counters]) {
+      if (ref.error) {
         errors.push({
           file: node.relativePath,
-          message: premise.error,
+          message: ref.error,
         });
-      } else if (premise.kind === "local" && premise.resolvedPath) {
-        if (!graph.nodes.has(premise.resolvedPath)) {
+      } else if (ref.kind === "local" && ref.resolvedPath) {
+        if (!graph.nodes.has(ref.resolvedPath)) {
           errors.push({
             file: node.relativePath,
-            message: `Broken reference: ${premise.raw} (resolved to ${premise.resolvedPath})`,
+            message: `Broken reference: ${ref.raw} (resolved to ${ref.resolvedPath})`,
           });
         }
       }

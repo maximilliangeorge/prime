@@ -77,7 +77,7 @@ export async function pluckCommand(
 
 function getChildren(graph: ArgumentGraph, nodeKey: string): string[] {
   return graph.edges
-    .filter((e) => e.from === nodeKey)
+    .filter((e) => e.from === nodeKey && e.type === "premise")
     .map((e) => e.to)
     .sort((a, b) => {
       const na = graph.nodes.get(a)!;

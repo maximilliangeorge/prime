@@ -76,6 +76,7 @@ describe('formatRefs', () => {
       claim: 'Remote axiom',
       body: null,
       premises: [],
+      counters: [],
       isAxiom: true,
     })
 
@@ -95,6 +96,7 @@ describe('formatRefs', () => {
       claim: 'Nested claim',
       body: null,
       premises: [],
+      counters: [],
       isAxiom: true,
     })
 
@@ -106,6 +108,55 @@ describe('formatRefs', () => {
     const graph = buildGraph([])
     const output = formatRefs(graph)
     expect(output).toBe('')
+  })
+})
+
+function buildCounterGraph() {
+  const rootDir = path.join(fixtures, 'counter')
+  const files = ['claim.md', 'objection.md', 'evidence.md', 'supported-objection.md']
+  const nodes = files.map((f) => parseNode(path.join(rootDir, f), rootDir))
+  return buildGraph(nodes)
+}
+
+describe('formatDot — counters', () => {
+  it('renders counter edges with dashed red style', () => {
+    const graph = buildCounterGraph()
+    const output = formatDot(graph)
+
+    expect(output).toContain('style=dashed')
+    expect(output).toContain('color=red')
+    expect(output).toContain('arrowhead=open')
+  })
+
+  it('tints counter nodes', () => {
+    const graph = buildCounterGraph()
+    const output = formatDot(graph)
+
+    expect(output).toContain('fillcolor="#fff0f0"')
+  })
+})
+
+describe('formatJson — counters', () => {
+  it('includes counters array on nodes', () => {
+    const graph = buildCounterGraph()
+    const output = formatJson(graph)
+    const parsed = JSON.parse(output)
+
+    expect(parsed.nodes['objection.md'].counters).toHaveLength(1)
+    expect(parsed.nodes['objection.md'].counters[0]).toBe('./claim.md')
+    expect(parsed.nodes['claim.md'].counters).toHaveLength(0)
+  })
+
+  it('includes type on edges', () => {
+    const graph = buildCounterGraph()
+    const output = formatJson(graph)
+    const parsed = JSON.parse(output)
+
+    const counterEdges = parsed.edges.filter((e: any) => e.type === 'counter')
+    const premiseEdges = parsed.edges.filter((e: any) => e.type === 'premise')
+
+    expect(counterEdges.length).toBeGreaterThan(0)
+    expect(premiseEdges.length).toBeGreaterThan(0)
   })
 })
 

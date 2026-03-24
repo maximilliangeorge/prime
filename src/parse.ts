@@ -36,6 +36,18 @@ export function parseNodeFromContent(
     return ref;
   });
 
+  const rawCounters: string[] = Array.isArray(data.counters)
+    ? data.counters
+    : [];
+
+  const counters = rawCounters.map((raw: string) => {
+    const ref = parsePremiseRef(String(raw));
+    if (ref.kind === "local") {
+      ref.resolvedPath = path.resolve(path.dirname(filePath), ref.raw);
+    }
+    return ref;
+  });
+
   const relativePath = path.relative(rootDir, filePath);
 
   return {
@@ -44,6 +56,7 @@ export function parseNodeFromContent(
     claim,
     body: bodyWithoutH1,
     premises,
+    counters,
     isAxiom: premises.length === 0,
   };
 }
