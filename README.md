@@ -22,6 +22,7 @@ Further reading:
 
 - [Deductive Reasoning](https://en.wikipedia.org/wiki/Deductive_reasoning)
 - [Validity and Soundness](https://iep.utm.edu/val-snd/)
+- [Logical Atomism](https://en.wikipedia.org/wiki/Logical_atomism)
 
 ## Usage
 
@@ -491,22 +492,22 @@ import {
   formatTree,
   formatJson,
   loadRepoSource,
-} from "prime-md";
+} from 'prime-md'
 ```
 
 ### Loading and validating a local repository
 
 ```ts
-import { discoverNodes, parseNode, buildGraph, validate } from "prime-md";
+import { discoverNodes, parseNode, buildGraph, validate } from 'prime-md'
 
-const rootDir = "./my-argument";
-const files = discoverNodes(rootDir);
-const nodes = files.map((f) => parseNode(f, rootDir));
-const graph = buildGraph(nodes);
-const result = validate(graph, rootDir);
+const rootDir = './my-argument'
+const files = discoverNodes(rootDir)
+const nodes = files.map((f) => parseNode(f, rootDir))
+const graph = buildGraph(nodes)
+const result = validate(graph, rootDir)
 
 if (!result.valid) {
-  console.error(result.errors);
+  console.error(result.errors)
 }
 ```
 
@@ -515,43 +516,49 @@ if (!result.valid) {
 `loadRepoSource` handles both local directories and remote GitHub URLs, including caching and recursive premise resolution:
 
 ```ts
-import { loadRepoSource, buildGraph, formatTree } from "prime-md";
+import { loadRepoSource, buildGraph, formatTree } from 'prime-md'
 
 const { nodes, remoteNodes } = await loadRepoSource(
-  "https://github.com/maximilliangeorge/prime-demo-cogito"
-);
-const graph = buildGraph([...nodes, ...remoteNodes]);
-console.log(formatTree(graph));
+  'https://github.com/maximilliangeorge/prime-demo-cogito',
+)
+const graph = buildGraph([...nodes, ...remoteNodes])
+console.log(formatTree(graph))
 ```
 
 ### Parsing a single node from a string
 
 ```ts
-import { parseNodeFromContent } from "prime-md";
+import { parseNodeFromContent } from 'prime-md'
 
 const markdown = `---
 premises:
   - ./axiom.md
 ---
 # My conclusion
-Because of the axiom, this follows.`;
+Because of the axiom, this follows.`
 
-const node = parseNodeFromContent(markdown, "conclusion.md", ".");
-console.log(node.claim);     // "My conclusion"
-console.log(node.isAxiom);   // false
-console.log(node.premises);  // [{ kind: "local", raw: "./axiom.md", ... }]
+const node = parseNodeFromContent(markdown, 'conclusion.md', '.')
+console.log(node.claim) // "My conclusion"
+console.log(node.isAxiom) // false
+console.log(node.premises) // [{ kind: "local", raw: "./axiom.md", ... }]
 ```
 
 ### Output formats
 
 ```ts
-import { formatList, formatTree, formatDot, formatJson, formatRefs } from "prime-md";
+import {
+  formatList,
+  formatTree,
+  formatDot,
+  formatJson,
+  formatRefs,
+} from 'prime-md'
 
-formatList(graph);  // Topologically sorted flat list
-formatTree(graph);  // Indented tree (supports { maxDepth } option)
-formatDot(graph);   // Graphviz DOT
-formatJson(graph);  // JSON with nodes and edges
-formatRefs(graph);  // Newline-separated file paths
+formatList(graph) // Topologically sorted flat list
+formatTree(graph) // Indented tree (supports { maxDepth } option)
+formatDot(graph) // Graphviz DOT
+formatJson(graph) // JSON with nodes and edges
+formatRefs(graph) // Newline-separated file paths
 ```
 
 Full TypeScript definitions are included — all types (`PrimeNode`, `ArgumentGraph`, `ValidationResult`, etc.) are exported.
